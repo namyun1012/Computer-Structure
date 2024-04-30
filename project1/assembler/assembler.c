@@ -6,8 +6,21 @@
 
 #define MAXLINELENGTH 1000
 
+struct label {
+	int addr;
+	char name[7]; // maximum is 6
+	char stored[MAXLINELENGTH]; // if fill 
+};
+
+
+struct label ** label_list;
+int list_size = 0;
+
 int readAndParse(FILE *, char *, char *, char *, char *, char *);
 int isNumber(char *);
+
+
+struct label_list * label_list;
 
 int main(int argc, char *argv[]) 
 {
@@ -15,6 +28,10 @@ int main(int argc, char *argv[])
 	FILE *inFilePtr, *outFilePtr;
 	char label[MAXLINELENGTH], opcode[MAXLINELENGTH], arg0[MAXLINELENGTH], 
 			 arg1[MAXLINELENGTH], arg2[MAXLINELENGTH];
+
+	// added code
+	label_list = (struct label **) malloc(sizeof(struct label *) * MAXLINELENGTH);
+
 
 	if (argc != 3) {
 		printf("error: usage: %s <assembly-code-file> <machine-code-file>\n",
@@ -38,22 +55,118 @@ int main(int argc, char *argv[])
 
 	/* here is an example for how to use readAndParse to read a line from
 		 inFilePtr */
-	if (!readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
+	
+	// if (!readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
 		/* reached end of file */
+		
+	//}
+	
+	// make labeling
+	/* TODO: Phase-1 label calculation */
+	// Error checking : duplicated labeling, 
+	
+	int cur_line = 0;		
+	int i = 0;
+
+	while(!readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
+		
+		// Not label
+		if(!strcmp(label, "")) continue;
+
+		// label size > 6
+		if(strlen(label) > 6) {
+			printf("Size over 6\n");
+			exit(0);
+		}
+		
+		if(isNumber(label[0])) {
+			printf("first letter is number");
+			exit(0);
+		}
+
+		// duplicated label;
+		for(i = 0; i < list_size; i++) {
+			if(!strcmp(label, label_list[i]->name)) {
+				printf("Duplicated Label detected\n");
+				exit(0);
+			}
+		}
+
+		// add label
+		// make label
+
+		struct label * new_label = (struct label *) malloc(sizeof(struct label));
+		strcpy(new_label->name, label);
+		new_label->addr = cur_line; // line is address 
+
+		// put in label list
+		label_list[list_size] = new_label;
+		list_size++;
+
+		// .fill 일시 stored 사용
+		if(!strcmp(opcode, ".fill")) {
+			
+			// 숫자인 경우 그대로 집어넣기
+			// 숫자 검사 isNumber String 받는다.
+			if(isNumber(arg0)) {
+				
+				// int 로는 표현 못함
+				long long test = atoll(arg0);
+				if(test < -2147483648 || test > 2147483647) {
+					printf("fill number value is overflowed!");
+					exit(0);
+				}
+				
+			}
+
+			strcpy(new_label->stored, arg0);
+		}
+
+		// increase cur_line
+		cur_line++;
 	}
 
-	/* TODO: Phase-1 label calculation */
-
+	// End of Labeling
 	/* this is how to rewind the file ptr so that you start reading from the
 		 beginning of the file */
+	// 파일 시작 부터 읽도록 초기화
 	rewind(inFilePtr);
 
 	/* TODO: Phase-2 generate machine codes to outfile */
 
 	/* after doing a readAndParse, you may want to do the following to test the
 		 opcode */
-	if (!strcmp(opcode, "add")) {
-		/* do whatever you need to do for opcode "add" */
+	
+	// opcode 확인하기
+	while(!readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
+		int result = 0;
+
+		// R type
+		// 000000 + opcode + regA + regB + unused + destReg 
+		if(!strcmp(opcode, "add") || !strcmp(opcode, "nor")) {
+
+		}
+
+		// I-type
+		else if(!strcmp(opcode, "lw") || !strcmp(opcode, "sw") || !strcmp(opcode, "beq")) {
+
+		}
+
+		// J - type
+		else if(!strcmp(opcode, "jalr")) {
+
+		}
+
+		// O - type
+		else if(!strcmp(opcode, "halt") || !strcmp(opcode, "noop")) {
+
+		}
+
+		// Not opcode
+		else {
+			printf("It is not offical opcode\n");
+			exit(0);
+		}
 	}
 
 	if (inFilePtr) {
@@ -120,4 +233,3 @@ int isNumber(char *string)
 	int i;
 	return( (sscanf(string, "%d", &i)) == 1);
 }
-
