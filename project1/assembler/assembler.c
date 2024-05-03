@@ -9,13 +9,11 @@
 struct label {
 	int addr;
 	char name[7]; // maximum is 6
-	char fill[MAXLINELENGTH]; // if fill 
-	int filled;
 };
 
 
-struct label ** label_list;
-int list_size = 0;
+struct label ** label_list; // label_list
+int list_size = 0; // label_size
 
 int readAndParse(FILE *, char *, char *, char *, char *, char *);
 int isNumber(char *);
@@ -79,39 +77,37 @@ int main(int argc, char *argv[])
 		// label size > 6
 		if(strlen(label) > 6) {
 			printf("Size over 6\n");
-			exit(0);
+			exit(1);
 		}
 		
 		char * temp = &label[0];
 		if(isNumber(temp)) {
 			printf("first letter is number");
-			exit(0);
+			exit(1);
 		}
 		
 		// duplicated label;
 		for(i = 0; i < list_size; i++) {
 			if(!strcmp(label, label_list[i]->name)) {
 				printf("Duplicated Label detected\n");
-				exit(0);
+				exit(1);
 			}
 		}
 
 		// add label
-		// make label
-
+		// make new label
 		struct label * new_label = (struct label *) malloc(sizeof(struct label));
 		strcpy(new_label->name, label);
 		new_label->addr = cur_line; // line is address 
-		new_label->filled = 0;
 
 		// put in label list
 		label_list[list_size] = new_label;
 		list_size++;
 		
-		// .fill 일시 fill 사용
+		// .fill 일시 검사함
 		if(!strcmp(opcode, ".fill")) {
 			
-			// 숫자인 경우 그대로 집어넣기
+			// 숫자인 경우 검사 후 집어넣기
 			// 숫자 검사 isNumber String 받는다.
 			if(isNumber(arg0)) {
 				
@@ -119,13 +115,10 @@ int main(int argc, char *argv[])
 				long long test = atoll(arg0);
 				if(test < -2147483648 || test > 2147483647) {
 					printf("fill number value is overflowed!");
-					exit(0);
+					exit(1);
 				}
 				
 			}
-			
-			strcpy(new_label->fill, arg0);
-			new_label->filled = 1;
 		}
 
 		// increase cur_line
@@ -138,10 +131,8 @@ int main(int argc, char *argv[])
 		 beginning of the file */
 	// 파일 시작 부터 읽도록 초기화
 	rewind(inFilePtr);
+	
 	// label check
-
-	for(int i = 0; i < list_size; i++)
-		printf("label : %s addr : %d, fill : %s \n", label_list[i]->name, label_list[i]->addr, label_list[i]->fill);
 
 	/* TODO: Phase-2 generate machine codes to outfile */
 
@@ -150,6 +141,7 @@ int main(int argc, char *argv[])
 	
 	// opcode 확인하기
 	// I type check 확인 위해서
+	// register 0은 오직 0만 저장함
 	cur_line = 0;
 	while(readAndParse(inFilePtr, label, opcode, arg0, arg1, arg2)) {
 		int result = 0;
@@ -173,22 +165,29 @@ int main(int argc, char *argv[])
 			// arg0 
 			if(!registerCheck(arg0)) {
 				printf("arg0 is unvalid\n");
-				exit(0);
+				exit(1);
 			}
 			// arg1
 			if(!registerCheck(arg1)) {
 				printf("arg1 is unvalid\n");
-				exit(0);
+				exit(1);
 			}
 
-			// arg2
+			// arg2 0이면 안된다.
 			if(!registerCheck(arg2)) {
 				printf("arg2 is unvalid\n");
-				exit(0);
+				exit(1);
 			}
 			// arg0 = reg A arg1 = regB arg2 = destReg
 			result |= (atoi(arg0)) << 19;
 			result |= (atoi(arg1)) << 16;
+
+			// dest arg 일 때
+			if(atoi(arg2) == 0) {
+				printf("dest register is not Zero\n");
+				exit(1);
+			}
+
 			result |= atoi(arg2);
 
 		}
@@ -218,14 +217,20 @@ int main(int argc, char *argv[])
 
 			if(!registerCheck(arg0)) {
 				printf("arg0 is unvalid\n");
-				exit(0);
+				exit(1);
 			}
 			// arg1
 			if(!registerCheck(arg1)) {
 				printf("arg0 is unvalid\n");
-				exit(0);
+				exit(1);
 			}
 			
+			// regB 의 값에는 load 못한다.
+			if(!strcmp(opcode, "lw") && atoi(arg1) == 0) {
+				printf("dest register is not Zero\n");
+				exit(1);
+			}
+
 			result |= (atoi(arg0)) << 19;
 			result |= (atoi(arg1)) << 16;
 
@@ -241,7 +246,7 @@ int main(int argc, char *argv[])
 				// offset Test
 				if( offset > 32767 || offset < -32768 ) {
 					printf("offset is overed!\n");
-					exit(0);
+					exit(1);
 				}
 			}
 
@@ -251,7 +256,7 @@ int main(int argc, char *argv[])
 				
 				if(!finded_label) {
 					printf("not existed label!\n");
-					exit(0);
+					exit(1);
 				}
 
 
@@ -263,7 +268,7 @@ int main(int argc, char *argv[])
 					// temp로 검사
 					if(temp > 32767 | temp < -32768) {
 						printf("offset is overed!\n");
-						exit(0);
+						exit(1);
 					}
 					
 					// 
@@ -280,7 +285,7 @@ int main(int argc, char *argv[])
 					// offset Test
 					if( offset > 32767 || offset < -32768 ) {
 						printf("offset is overed!\n");
-						exit(0);
+						exit(1);
 					}
 				}
 			}
@@ -297,12 +302,12 @@ int main(int argc, char *argv[])
 
 			if(!registerCheck(arg0)) {
 				printf("arg0 is unvalid\n");
-				exit(0);
+				exit(1);
 			}
 			// arg1
 			if(!registerCheck(arg1)) {
 				printf("arg0 is unvalid\n");
-				exit(0);
+				exit(1);
 			}
 			
 			result |= (atoi(arg0)) << 19;
@@ -341,7 +346,7 @@ int main(int argc, char *argv[])
 				struct label * temp = findLabel(arg0);
 				if(!temp) {
 					printf("not existed label\n");
-					exit(0);
+					exit(1);
 				}
 
 				result |= temp->addr;
@@ -351,7 +356,7 @@ int main(int argc, char *argv[])
 
 		else {
 			printf("It is not offical opcode\n");
-			exit(0);
+			exit(1);
 		}
 		
 		cur_line++;
@@ -367,6 +372,9 @@ int main(int argc, char *argv[])
 	}
 
 	// label 할당 해제할 것
+	for(int i = 0; i < list_size; i++) 
+		free(label_list[i]);
+	free(label_list);
 	return(0);
 }
 
@@ -426,6 +434,7 @@ int isNumber(char *string)
 	return( (sscanf(string, "%d", &i)) == 1);
 }
 
+// for register check, if it is not a number, or < 0 or > 7 return 0
 int registerCheck(char *reg) {
 	
 	if(!isNumber(reg)) return 0;

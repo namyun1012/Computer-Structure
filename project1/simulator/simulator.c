@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
     }
 
     /* read in the entire machine-code file into memory */
+    // 하나씩 Machine code를 읽어나감
     for (state.numMemory = 0; fgets(line, MAXLINELENGTH, filePtr) != NULL;
             state.numMemory++) {
 
@@ -44,9 +45,125 @@ int main(int argc, char *argv[])
             exit(1);
         }
         printf("memory[%d]=%d\n", state.numMemory, state.mem[state.numMemory]);
+
+    }
+    
+		/* TODO: */
+    
+    state.pc = 0;
+    // halt 나올시 종료함
+    int code, opcode, arg0, arg1, arg2;
+    int i = 0;
+    for(i = 0; i <= 7; i++)
+        state.reg[i] = 0;
+
+    i = 0;
+    while(1) {
+        // i++;
+        i++;
+        code = state.mem[state.pc];
+        state.pc += 1;
+
+        // code parsing 
+        opcode = (code >> 22) & 0b111; // opcode
+        arg0 = (code >> 19) &0b111; // regA
+        arg1 = (code >> 16) & 0b111; // regB 
+        arg2 = code & 0xffff; // 16bit
+
+        // printf("current code : opcode : %d arg0 : %d arg1 : %d arg2 : %d\n", opcode, arg0, arg1, arg2);
+
+        // r-type
+        if(opcode >= 0 && opcode <= 1) {
+            // arg2 는 끝의 3 bit만 사용한다.
+            arg2 &= 0b111;
+
+            // add
+            if(opcode == 0) {
+                state.reg[arg2] = state.reg[arg0] + state.reg[arg1];
+            }
+
+            // nor
+            else {
+                state.reg[arg2] = !(state.reg[arg0] || state.reg[arg1]);
+            }
+        }
+
+        // I-type
+        else if(opcode >= 2 && opcode <= 4) {
+           
+
+            int offset = convertNum(arg2);
+            int addr;
+             // lw
+            if(opcode == 2) {
+                addr = state.reg[arg0] + offset;
+                state.reg[arg1] = state.mem[addr];
+            }
+
+
+            // sw
+            else if(opcode == 3) {
+                addr = state.reg[arg0] + offset;
+                state.mem[addr] = state.reg[arg1];
+            }
+
+            // beq
+            // address를 따로 처리해야 한다.
+            else {
+                // 같을 경우에 branch
+                short temp = 0;
+                temp |= arg2;
+                int temp32 = (int) temp;
+                
+                if(state.reg[arg0] == state.reg[arg1]) {
+                    state.pc += temp32;
+                    // printf("pc : %d\n", state.pc);
+                }
+            }
+
+
+        }
+
+        // J-type
+        else if(opcode == 5) {
+            state.reg[arg1] = state.pc;
+
+            //regA 와 regB의 값이 다를 경우에만 점프함
+            if(state.reg[arg0] != state.reg[arg1]) {
+                state.pc =state.reg[arg0];
+            }
+        }
+
+        // O-type
+        else if(opcode >= 6 && opcode <= 7) {
+            
+            // halt시 while문 종료함
+            if(opcode == 6) {
+                break;
+            }
+
+            // do nothing
+            else {
+
+            }
+
+        }
+
+        else {
+            printf("not opcode\n");
+            exit(1);
+        }
+
+        printState(&state);
     }
 
-		/* TODO: */
+    printf("machine halted\n");
+    printf("total of %d instructions executed\n", i);
+    printf("final state of machine:\n");
+    
+
+
+    printState(&state);
     return(0);
 }
 
@@ -73,4 +190,11 @@ int convertNum(int num)
 		num -= (1 << 16);
 	}
 	return (num);
+}
+
+// 어처피 3 bit 만 받아와서 0 이상 7 이하만 표현 가능하다.
+int registerCheck(int reg) {	
+	if(reg < 0 || reg > 7) return 0;
+
+	return 1;
 }
