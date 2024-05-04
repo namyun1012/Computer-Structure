@@ -310,6 +310,13 @@ int main(int argc, char *argv[])
 				exit(1);
 			}
 			
+			// regB에 pc 저장하므로 0이면 안된다.
+			if(atoi(arg1) == 0)  {
+				printf("dest register is not Zero\n");
+				exit(1);
+			}
+
+
 			result |= (atoi(arg0)) << 19;
 			result |= (atoi(arg1)) << 16;
 

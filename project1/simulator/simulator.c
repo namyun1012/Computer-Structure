@@ -60,6 +60,11 @@ int main(int argc, char *argv[])
     i = 0;
     while(1) {
         // i++;
+        if(state.pc < 0 || state.pc >= 65536) {
+            printf("pc error!\n");
+            exit(1);
+        }
+
         i++;
         code = state.mem[state.pc];
         state.pc += 1;
