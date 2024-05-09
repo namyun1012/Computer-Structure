@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
             printf("pc error!\n");
             exit(1);
         }
-
+        printState(&state);
         i++;
         code = state.mem[state.pc];
         state.pc += 1;
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
-        printState(&state);
+       
     }
 
     printf("machine halted\n");
